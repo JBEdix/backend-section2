@@ -1,0 +1,402 @@
+Arquictura de N Capas:
+
+Creamos repositorio en github
+git clone https://github.com/JBEdix/backend-section.git
+npm init
+
+
+dependencias:
+npm i express express-async-errors awilix cors compression helmet bcryptjs jsonwebtoken memory-cache mongoose swagger-ui-express mongoose-autopopulate
+
+creamos un archivo .gitignore y en ella ponemos node_modules para que no se cargue en el repositorio.
+
+npm i -D dotenv nodemon mockingoose jest //jest para test para api
+
+creamos index.js
+
+en package.json incluimos un scritp:
+    "start":"node index.js",//npm start // para produccion
+    "dev":"nodemon index.js",// npm run dev // para desarrollo
+
+creamos las carpetas tests, src/controllers, src/models, src/services, src/routes, src/middlewares, src/repositories, src/helpers, src/startup, src/config en cada una de las subcarpetas de src debe haber un index.js
+
+Se hizo commit con un gad ADD:"" y pull.
+
+Crear archivo .env:
+    touch .env
+en dicho archivo configuramos variables de entorno:
+PORT=5050
+MONGO_URI="mongodb+srv://dbJB:7vteUYhvernRe9y@cluster0-yovst.azure.mongodb.net/shareyouridea?retryWrites=true&w=majority"
+APPLICATION_NAME="Share Your Idea"
+
+en src/config/index.js
+if (proccess.env.NODE_ENV !== "production"){
+    require("dotenv").config();
+}
+
+module.exports={
+    PORT: process.env.PORT,
+    MONGO_URI: proccess.env.MONGO_URI,
+    APPLICATION_NAME: proccess.env.APPLICATION_NAME
+}
+
+en src/startup/container.js
+const { createContainer, asClass, asValue, asFunction } =require('awilix');// asclasss/value/funtion inyecta un objeto como una clase, valor o funcion
+
+const container= createContainer();
+
+module.exports= container;
+
+en src/servives/home.service.js
+    class HomeServive{
+        index(){
+        return{
+            message:"hello world"
+        };
+        }
+    }
+
+    module.exports = HomeServive;
+
+en src/services/index.js
+    module.exports = {
+        HomeService: require("./home.service")
+    }
+
+en src/startup/container.js
+
+    const { createContainer, asClass, asValue, asFunction } = require('awilix');// asclasss/value/funtion inyecta un objeto como una clase, valor o funcion
+
+    //Services
+    const { HomeService } = require('../services')
+
+    const container= createContainer();
+
+    container.register({
+        HomeService: asClass(HomeService).singleton()
+    });
+
+    module.exports = container;
+
+
+en controllers/home.controller.js:
+    let _homeService = null;
+
+    class HomeController{
+        constructor ({HomeService}){
+            _homeService = HomeService;
+        }
+        index(req, res){
+            return res.send(_homeService.index())
+        }
+
+    }
+
+    module.exports = HomeController;
+
+importamos en controllers/index.js:
+    imports.exports = {
+        HomeController: require('./home.controller')
+    }
+
+en startup/container.js:
+    const { createContainer, asClass, asValue, asFunction } = require('awilix');// asclasss/value/funtion inyecta un objeto como una clase, valor o funcion
+    //Services
+    const { HomeService } = require('../services')
+    //controller
+    const { HomeController } =require('../controllers')
+
+    const container= createContainer();
+    container.register({
+        HomeService: asClass(HomeService).singleton()
+    }).register({
+        HomeController: asClass(HomeController.bind(HomeController)).singleton()
+    });
+
+    module.exports = container;
+
+en routes/index.js:
+    module.exports = {
+        HomeRoutes: require('./home.routes')
+    }
+
+en routes/home.routes.js:
+    const { Router } = require('express');
+    module.exports = function({HomeController}){
+        const router = Router();
+        router.get("/", HomeController.index);
+        return router;
+    };
+
+en startup/container.js agregamos:
+    //routes
+    const { HomeRoutes } = require('../routes/index.routes');
+    y un nuevo registro en la variable container
+    .register({
+        HomeRoutes: asFunction(HomeRoutes).singleton()
+    });
+
+en routes/index.js:
+    const express = require('express');
+    const cors = require('cors');
+    const helmet = require('helmet');
+    const compression = require('compression');
+    const homeRoutes = require('./home.routes');
+    require("express-async-errors");
+
+    module.exports = function({HomeRoutes}){
+        const router = express.Router();
+        const apiRoutes = express.Router();
+
+        apiRoutes.use(express.json()).use(cors()).use(helmet()).use(compression());
+        apiRoutes.use("/home", homeRoutes);
+        router.use("/v1/api", apiRoutes);
+
+        return router
+    };
+
+en startup/container.js:
+en el apartado de //routes
+const Routes = require('../routes');
+
+//config
+    const config = require('../config');
+
+    agregamos otro registro:
+    .register({
+        router: asFunction(Routes).singleton(),
+        config: asValue(config)
+    })
+
+    en startup/index.js:
+    const express = require('express');
+
+    let _express = null;
+    let _config = null;
+
+    class Server{
+        constructor({config, router}){
+            _config= config;
+            _express = express().use(router);
+        }
+
+        start(){
+            return new Promise(resolve => {
+                _express.listen(_config.PORT, ()=>{
+                    console.log(_config.APPLICATION_NAME + "API running on port" + _config.PORT);
+                    resolve();
+                });
+            });
+        }
+    }
+
+    module.exports = Server;
+
+en startup/container:
+    en el apartado de //config
+    const app = require('.');
+    y agregamos en el registro donde tenemos los atributos de router, config uno nuevo:
+    app: asClass(app).singleton()
+
+Arreglar error de rutas no encontradas y errores:
+en src/middlewares:
+    /not-found.middleware.js:
+    module.exports = (req, res, next) => res.status(404).send({status:404, message:"Resource not found"});
+    /error.middlewares.js:
+    module.exports = (err, req, res, next) => {
+        const httpStatus = err.status || 500;
+    
+        return res.status(httpStatus).send({
+            status: httpStatus,
+            message: err.message || "Internal server error"
+        });
+    };
+
+    en middlewares.index.js
+    module.exports = {
+        NotFoundMiddleware: require("./not-found.middleware"),
+        errorMiddleware: require("./error.middleware")
+    }
+
+    en routes/index.js:
+    importamos:
+    const { NotFoundMiddleware, ErrorMiddleware } = require('../middlewares');
+    y agregamos abajo de las rutas establecidas:
+    router.use(NotFoundMiddleware);
+    router.use(ErrorMiddleware);
+
+luego se hace commit y pull en el branch principal
+
+Creacion de modelos:
+en models
+user.models.js:
+    const mongoose = require('mongoose');
+    const { Schema } = mongoose;
+    const { compareSync, hashSync, genSaltSync } = require("bcryptjs");
+
+    const UserSchema = new Schema({
+        name: {type: String, required:true},
+        username: {type: String, required:true},
+        password: { type: String, required: true},
+        age: {type: Number, required:true}
+    });
+
+    UserSchema.methods.toJSON = function(){
+        let user = this.toObjetc();
+        delete user.password;
+        return user;
+    };
+
+    UserSchema.methods.comparePassword = function (){
+        return compareSync(password, this.password);
+    };
+
+    UserSchema.pre('save', async function(next){
+        const user = this;
+
+        if(!user.isModified("password")){
+            return next();
+        }
+
+        const salt = genSaltSync(10);//10 => es la longitud de 10 caracteres
+        const hashedPassword = hashSync(user.password, salt);
+        user.password = hashedPassword;
+        next();
+    });
+
+
+    module.exports = mongoose.Schema("user", UserSchema);
+
+en idea.model.js:
+    const mongoose = require('mongoose');
+    const { Schema } = mongoose;
+
+    const IdeaSchema = new Schema({
+        idea: {type: String, required:true},
+        description: {type: String},
+        upvotes:[{type: Boolean}],
+        downvotes: [{type: Boolean}],
+        author: {type: Schema.Types.ObjectId, ref: "user", required:true, autopopulate: true}, 
+        comments:[{type: Schema.Types.ObjectId, ref: "comment", required:true, autopopulate: true}]
+    });
+
+    IdeaSchema.plugin(require('mongoose-autopopulate'));
+
+    module.exports = mongoose.Schema("idea", IdeaSchema);
+
+en comment.model.js:
+    const mongoose = require('mongoose');
+    const { Schema } = mongoose;
+
+    const CommentSchema = new Schema({
+        comment: {type: String, required:true},
+        description: {type: String},
+        author: {type: Schema.Types.ObjectId, ref: "user", required:true, autopopulate: true}
+    });
+
+    CommentSchema.plugin(require('mongoose-autopopulate'));
+
+    module.exports = mongoose.Schema("comment", CommentSchema);
+
+en models/index.js:
+    module.exports = {
+        User: require('./user.model'),
+        Idea: require('./idea.model'),
+        Comment: require('./comment.model')
+    }
+
+en startup/container.js
+Importamos los modelos:
+//models
+const {User, Comment, Idea} = require('../models')
+
+Agregamos el registro para nuestros modelos:
+.register({
+    User: asValue(User),
+    Comment: asValue(Comment),
+    Idea: asValue(Idea)
+});
+
+Creacion de repositorio:
+creamos en repositories:
+base.repository.js:
+class BaseRepository {
+    constructor(model){
+        this.model = model;
+    }
+
+    async get(id){
+        return await this.model.findById(id);
+    }
+    async getAll(){
+        return await this.model.find();
+    }
+    async create(entity){
+        return await this.model.create(entity);
+    }
+    async update(id, entity){
+        return await this.model.findByIdAndUpdate(id, entity, {new: true});
+    }
+    async delete(id){
+        return await this.model.findByIdAndDelete(id);
+    }
+}
+
+module.exports = BaseRepository;
+
+/user.repository.js:
+const BaseRepository = require('./base.repository');
+let _user = null;
+
+class UserRepository extends BaseRepository {
+    constructor({ User }){
+        super(User);
+        _user = User;
+    }
+    async getUserByUserName(userName){
+        return await _user.findOne({userName});
+    }
+
+}
+
+module.exports = UserRepository;
+
+/idea.repository.js:
+const BaseRepository = require('./base.repository');
+let _idea = null;
+
+class IdeaRepository extends BaseRepository {
+    constructor({ Idea }){
+        super(Idea);
+        _idea = Idea;
+    }
+
+    async getUserIdea(author){
+        return await _idea.find([author]);
+    }
+}
+
+module.exports = IdeaRepository;
+
+/comment.repository.js:
+const BaseRepository = require('./base.repository');
+let _comment= null;
+
+class CommentRepository extends BaseRepository {
+    constructor({ Comment }){
+        super(Comment);
+        _comment = Comment;
+    }
+}
+
+module.exports = CommentRepository;
+
+en repositories/index.js:
+module.exports = {
+    UserRepository: require('./user.repository'),
+    IdeaRepository: require('./idea.repository'),
+    CommentRepository: require('./comment.repository')
+}
+
+en el contenedor /startup/container.js:
+importamos los repositorios:
