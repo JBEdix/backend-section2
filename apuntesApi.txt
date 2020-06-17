@@ -278,7 +278,7 @@ user.models.js:
     });
 
 
-    module.exports = mongoose.Schema("user", UserSchema);
+    module.exports = mongoose.model("user", UserSchema);
 
 en idea.model.js:
     const mongoose = require('mongoose');
@@ -295,7 +295,7 @@ en idea.model.js:
 
     IdeaSchema.plugin(require('mongoose-autopopulate'));
 
-    module.exports = mongoose.Schema("idea", IdeaSchema);
+    module.exports = mongoose.model("idea", IdeaSchema);
 
 en comment.model.js:
     const mongoose = require('mongoose');
@@ -309,7 +309,7 @@ en comment.model.js:
 
     CommentSchema.plugin(require('mongoose-autopopulate'));
 
-    module.exports = mongoose.Schema("comment", CommentSchema);
+    module.exports = mongoose.model("comment", CommentSchema);
 
 en models/index.js:
     module.exports = {
@@ -321,7 +321,7 @@ en models/index.js:
 en startup/container.js
 Importamos los modelos:
 //models
-const {User, Comment, Idea} = require('../models')
+const {User, Comment, Idea} = require('../models');
 
 Agregamos el registro para nuestros modelos:
 .register({
@@ -330,6 +330,7 @@ Agregamos el registro para nuestros modelos:
     Idea: asValue(Idea)
 });
 
+----------------------------------------------------------------------------------------------------
 Creacion de repositorio:
 creamos en repositories:
 base.repository.js:

@@ -10,6 +10,7 @@ const { HomeController } =require('../controllers')
 const { HomeRoutes } = require('../routes/index.routes');
 const Routes = require('../routes');
 //models
+const {comment, idea, user} = require('../models');
 
 const container= createContainer();
 container.register({
@@ -22,6 +23,10 @@ container.register({
     router: asFunction(Routes).singleton(),
     config: asValue(config),
     app: asClass(app).singleton()
+}).register({
+    comment:asValue(comment), 
+    idea:asValue(idea), 
+    user:asValue(user)
 });
 
 module.exports = container;
