@@ -414,3 +414,12 @@ module.exports = {
 
 en el contenedor /startup/container.js:
 importamos los repositorios:
+//Repositories
+const {CommentRepository, IdeaRepository, UserRepository} = require('../repositories');
+y agregamos los registros:
+.register({
+    CommentRepository: asClass(CommentRepository).singleton(), 
+    IdeaRepository: asClass(IdeaRepository).singleton(),
+    UserRepository: asClass(UserRepository).singleton()
+});
+
