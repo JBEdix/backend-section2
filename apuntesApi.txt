@@ -21,7 +21,7 @@ en package.json incluimos un scritp:
 creamos las carpetas tests, src/controllers, src/models, src/services, src/routes, src/middlewares, src/repositories, src/helpers, src/startup, src/config en cada una de las subcarpetas de src debe haber un index.js
 
 Se hizo commit con un gad ADD:"" y pull.
-
+-----------------------------------------------------------------------------
 Crear archivo .env:
     touch .env
 en dicho archivo configuramos variables de entorno:
@@ -47,7 +47,7 @@ const container= createContainer();
 
 module.exports= container;
 
-en src/servives/home.service.js
+en src/services/home.service.js
     class HomeServive{
         index(){
         return{
@@ -95,9 +95,9 @@ en controllers/home.controller.js:
     module.exports = HomeController;
 
 importamos en controllers/index.js:
-    imports.exports = {
-        HomeController: require('./home.controller')
-    }
+module.exports = {
+    HomeController: require('./home.controller')
+}
 
 en startup/container.js:
     const { createContainer, asClass, asValue, asFunction } = require('awilix');// asclasss/value/funtion inyecta un objeto como una clase, valor o funcion
@@ -115,7 +115,7 @@ en startup/container.js:
 
     module.exports = container;
 
-en routes/index.js:
+en routes/index.routes.js:
     module.exports = {
         HomeRoutes: require('./home.routes')
     }
@@ -137,23 +137,22 @@ en startup/container.js agregamos:
     });
 
 en routes/index.js:
-    const express = require('express');
-    const cors = require('cors');
-    const helmet = require('helmet');
-    const compression = require('compression');
-    const homeRoutes = require('./home.routes');
-    require("express-async-errors");
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+require("express-async-errors");
 
-    module.exports = function({HomeRoutes}){
-        const router = express.Router();
-        const apiRoutes = express.Router();
+module.exports = function({HomeRoutes}){
+    const router = express.Router();
+    const apiRoutes = express.Router();
 
-        apiRoutes.use(express.json()).use(cors()).use(helmet()).use(compression());
-        apiRoutes.use("/home", homeRoutes);
-        router.use("/v1/api", apiRoutes);
+    apiRoutes.use(express.json()).use(cors()).use(helmet()).use(compression());
+    apiRoutes.use("/home", HomeRoutes);
+    router.use("/v1/api", apiRoutes);
 
-        return router
-    };
+    return router
+};
 
 en startup/container.js:
 en el apartado de //routes
@@ -198,6 +197,19 @@ en startup/container:
     y agregamos en el registro donde tenemos los atributos de router, config uno nuevo:
     app: asClass(app).singleton()
 
+en index.js principal:
+const container = require('./src/startup/container');
+const server = container.resolve("app");
+const { MONGO_URI } = container.resolve("config");
+
+const mongoose = require('mongoose');
+mongoose.set("useCreateIndex", true);
+
+mongoose
+.connect(MONGO_URI, { useNewUrlParser: true, useFindAndModify: false, useUnifiedTopology: true})
+.then(()=>server.start())
+.catch(console.log);
+
 Arreglar error de rutas no encontradas y errores:
 en src/middlewares:
     /not-found.middleware.js:
@@ -215,7 +227,7 @@ en src/middlewares:
     en middlewares.index.js
     module.exports = {
         NotFoundMiddleware: require("./not-found.middleware"),
-        errorMiddleware: require("./error.middleware")
+        ErrorMiddleware: require("./error.middleware")
     }
 
     en routes/index.js:
@@ -226,6 +238,7 @@ en src/middlewares:
     router.use(ErrorMiddleware);
 
 luego se hace commit y pull en el branch principal
+----------------------------------------------------------------------------------------------------
 
 Creacion de modelos:
 en models
