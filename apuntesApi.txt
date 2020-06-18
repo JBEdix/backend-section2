@@ -634,3 +634,161 @@ importamos donde ya teniamos el sevicio de home:
     IdeaService: asClass(IdeaService).singleton(), 
     CommentService: asClass(CommentService).singleton() 
 -----------------------------------------------------------------------------------------------------
+
+Creacion de los controladores:
+en user.controller.js:
+    let _userService = null;
+
+    class UserController{
+        constructor({UserService}){
+            _userService = UserService
+        }
+
+        async get(req, res){
+            const { userId } = req.params;
+            const user = await _userService.get(userId);
+            return res.send(user);
+        }
+
+        async getAll(req, res){
+            const users = await _userService.getAll();
+            return res.send(users);
+        }
+
+        async update(req, res){
+            const { body } = req;
+            const { userId } = req.params;
+            const  updateUser =  await _userService.update(userId, body);
+            return res.send(updateUser);
+        }
+
+        async delete(req, res){
+            const { userId } = req.params;
+            const deleteUser = await _userService.delete(userId);
+            return res.send(deleteUser);
+        }
+    }
+
+    module.exports = UserController;
+
+en idea.controller.js:
+    let _ideaService = null;
+
+    class IdeaController{
+        constructor({IdeaService}){
+            _ideaService = IdeaService
+        }
+
+        async get(req, res){
+            const { ideaId } = req.params;
+            const idea = await _ideaService.get(ideaId);
+            return res.send(idea);
+        }
+
+        async getAll(req, res){
+            const ideas = await _ideaService.getAll();
+            return res.send(ideas);
+        }
+
+        async create(req, res){
+            const { body } = req;
+            const createIdea = await _ideaService.create(body);
+            return res.status(201).send(createIdea);
+        }
+
+        async update(req, res){
+            const { body } = req;
+            const { ideaId } = req.params;
+            const  updateIdeas =  await _ideaService.update(ideaId, body);
+            return res.send(updateIdeas);
+        }
+
+        async delete(req, res){
+            const { ideaId } = req.params;
+            const deleteIdeas = await _ideaService.delete(ideaId);
+            return res.send(deleteIdeas);
+        }
+
+        async getUserIdeas(req, res){
+            const {userId} = req.params;
+            const ideas = await _ideaService.getUserIdeas(userId);
+            return res.send(ideas);
+        }
+
+        async upvoteIdea(req, res){
+            const {ideaId} = req.params;
+            const idea = await _ideaService.upvoteIdea(ideaId);
+            return res.send(idea);
+        }
+
+        async downvoteIdea(req, res){
+            const {ideaId} = req.params;
+            const idea = await _ideaService.downvoteIdea(ideaId);
+            return res.send(idea);
+        }
+    }
+
+    module.exports = IdeaController;
+
+en comment.controller.js
+    let _commentService = null;
+
+    class CommentController{
+        constructor({CommentService}){
+            _commentService = CommentService
+        }
+
+        async get(req, res){
+            const { commentId } = req.params;
+            const comment = await _commentService.get(commentId);
+            return res.send(comment);
+        }
+
+        async update(req, res){
+            const { body } = req;
+            const { commentId } = req.params;
+            const  updateComment =  await _commentService.update(commentId, body);
+            return res.send(updateComment);
+        }
+
+        async delete(req, res){
+            const { commentId } = req.params;
+            const deleteComment = await _commentService.delete(commentId);
+            return res.send(deleteComment);
+        }
+
+        async getIdeaComment(req, res){
+            const { ideaId } = req.params;
+            const comments = await _commentService.getIdeaComment(ideaId);
+            return res.send(comments);
+        }
+
+        async createComment(req, res){
+            const { body } = req;
+            const { ideaId } = req.params;
+            const createComment = await _commentService.createComment(body, ideaId);
+            return res.send(createComment);
+        }
+    }
+
+    module.exports = CommentController;
+
+en controller/index.js:
+    module.exports = {
+        HomeController: require('./home.controller'), 
+        UserController: require('./user.controller'),
+        IdeaController: require('./idea.controller'),
+        CommentController: require('./comment.controller')
+    }
+
+en el container:
+importamos en el apartado de controladores:
+    UserController, IdeaController, CommentController
+
+Agregamos los registros de los controladores:
+    UserController: asClass(UserController.bind(UserController)).singleton(),
+    IdeaController: asClass(IdeaController.bind(IdeaController)).singleton(),
+    CommentController: asClass(CommentController.bind(CommentController)).singleton(),
+
+[ADD] controllers added
+---------------------------------------------------------------------------------------------------
