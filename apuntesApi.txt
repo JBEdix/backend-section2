@@ -352,7 +352,8 @@ class BaseRepository {
         return await this.model.findByIdAndUpdate(id, entity, {new: true});
     }
     async delete(id){
-        return await this.model.findByIdAndDelete(id);
+        await this.model.findByIdAndDelete(id);
+        return true;
     }
 }
 
@@ -363,9 +364,9 @@ const BaseRepository = require('./base.repository');
 let _user = null;
 
 class UserRepository extends BaseRepository {
-    constructor({ User }){
-        super(User);
-        _user = User;
+    constructor({ user }){
+        super(user);
+        _user = user;
     }
     async getUserByUserName(userName){
         return await _user.findOne({userName});
@@ -380,9 +381,9 @@ const BaseRepository = require('./base.repository');
 let _idea = null;
 
 class IdeaRepository extends BaseRepository {
-    constructor({ Idea }){
-        super(Idea);
-        _idea = Idea;
+    constructor({ idea }){
+        super(idea);
+        _idea = idea;
     }
 
     async getUserIdea(author){
@@ -397,9 +398,9 @@ const BaseRepository = require('./base.repository');
 let _comment= null;
 
 class CommentRepository extends BaseRepository {
-    constructor({ Comment }){
-        super(Comment);
-        _comment = Comment;
+    constructor({ comment }){
+        super(comment);
+        _comment = comment;
     }
 }
 
@@ -792,3 +793,79 @@ Agregamos los registros de los controladores:
 
 [ADD] controllers added
 ---------------------------------------------------------------------------------------------------
+
+Creacion de rutas
+
+en routes/
+en user.routes.js
+const { Router } = require('express');
+
+module.exports = function({ UserController }){
+    const router = Router();
+
+    router.get("", UserController.getAll);
+    router.get("/:userId", UserController.get);
+    router.patch("/:userId", UserController.update);
+    router.delete("/:userId", UserController.delete);
+    
+    return router;
+}
+
+
+en idea.routes.js:
+const { Router } = require('express');
+
+module.exports = function({ IdeaController }){
+    const router = Router();
+
+    router.get("", IdeaController.getAll);
+    router.get("/:ideaId", IdeaController.get);
+    router.get("/:ideaId/all", IdeaController.getUserIdeas);
+    router.post("", IdeaController.create);
+    router.patch("/:ideaId", IdeaController.update);
+    router.delete("/:ideaId", IdeaController.delete);
+    router.post("/:ideaId/upvote", IdeaController.upvoteIdea);
+    router.post("/:ideaId/downvote", IdeaController.downvoteIdea);
+    
+    return router;
+}
+
+en commnent.routes.js:
+const { Router } = require('express');
+
+module.exports = function({ CommentController }){
+    const router = Router();
+
+    router.get("/:commentId/unique", CommentController.get);
+    router.get("/:ideaId", CommentController.getIdeaComment);
+    router.post("/:ideaId", CommentController.createComment);
+    router.patch("/:commentId", CommentController.update);
+    router.delete("/:commentId", CommentController.delete);
+    
+    return router;
+}
+
+en index.routes.js:
+module.exports = {
+    HomeRoutes: require('./home.routes'),
+    UserRoutes: require('./user.routes'),
+    IdeaRoutes: require('./idea.routes'),
+    CommentRoutes: require('./comment.routes')
+}
+
+en el contenedor:
+importamos las rutas en dicho apartado:
+    , UserRoutes, IdeaRoutes, CommentRoutes 
+
+y agregamos al registro para las rutas:
+    UserRoutes: asFunction(UserRoutes).singleton(),
+    IdeaRoutes: asFunction(IdeaRoutes).singleton(),
+    CommentRoutes: asFunction(CommentRoutes).singleton(),
+
+Por ultimo en index.js
+inyectamos en el module.export: , UserRoutes, IdeaRoutes, CommentRoutes
+
+y en agregamos las rutas abajo de la de home:
+    apiRoutes.use("/user", UserRoutes);
+    apiRoutes.use("/idea", IdeaRoutes);
+    apiRoutes.use("/comment", CommentRoutes);
