@@ -2,7 +2,7 @@ let _userService = null;
 
 class UserController{
     constructor({UserService}){
-        _userService = UserService
+        _userService = UserService;
     }
 
     async get(req, res){
