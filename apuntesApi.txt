@@ -422,4 +422,215 @@ y agregamos los registros:
     IdeaRepository: asClass(IdeaRepository).singleton(),
     UserRepository: asClass(UserRepository).singleton()
 });
+[ADD] Repositories added
+-----------------------------------------------------------------------------------------------------
 
+Creacion de microservicios:
+
+en service/base.service.js:
+    class BaseService{
+        constructor(repository){
+            this.repository = repository;
+        }
+        async get(id){
+            if(!id){
+                const error = new Error();
+                error.status = 404;
+                error.message = "id must be sent";
+                throw error;
+            }
+            
+            const currentEntity = await this.repository.get(id);
+            if(!currentEntity){
+                const error = new Error();
+                error.status = 404;
+                error.message = "entity does not found";
+                throw error;
+            }
+        }
+        
+        async getAll(){
+            return await this.repository.getAll();
+        }
+
+        async create(entity){
+            return await this.repository.create(entity);
+        }
+
+        async update(id, entity){
+            if(!id){
+                const error = new Error();
+                error.status = 404;
+                error.message = "id must be sent";
+                throw error;
+            }
+            return await this.repository.update(id, entity);
+        }
+
+        async delete(id){
+            if(!id){
+                const error = new Error();
+                error.status = 404;
+                error.message = "id must be sent";
+                throw error;
+            }
+            return await this.repository.delete(id, entity);
+        }
+    }
+
+    module.exports = BaseService;
+
+en user.service.js:
+    const BaseService = require('./base.service');
+    let _userRepository = null;
+
+    class UserService extends BaseService{
+        constructor({UserRepository}){
+            super(UserRepository);
+            _userRepository = UserRepository;
+        }
+
+        async getUserByUserName(userName){
+            return await _userRepository.getUserByUserName(userName);
+        }
+    }
+
+    module.exports = UserService;
+
+en idea.service.js:
+    const BaseService = require('./base.service');
+    let _ideaRepository = null;
+
+    class IdeaService extends BaseService{
+        constructor({IdeaRepository}){
+            super(IdeaRepository);
+            _ideaRepository = IdeaRepository;
+        }
+
+        async getUserIdea(author){
+            if(!author){
+                const error = new Error();
+                error.status = 400;
+                error.message = "UserId must be sent";
+                throw error;
+            }
+            return await _ideaRepository.getUserIdea(author);
+        }
+
+        async upvoteIdea(ideaId){
+            if(!ideaId){
+                const error = new Error();
+                error.status = 400;
+                error.message = "IdeaId must be sent";
+                throw error;
+            }
+
+            const idea = await _ideaRepository.get(ideaId);
+            if (!idea){
+                const error = new Error();
+                error.status = 404;
+                error.message = "idea does not exist";
+                throw error;
+            }
+
+            idea.upvotes.push(true);
+
+            return await _ideaRepository.update(ideaId, {upvotes: idea.upvotes});
+        }
+
+        async downvoteIdea(ideaId){
+            if(!ideaId){
+                const error = new Error();
+                error.status = 400;
+                error.message = "IdeaId must be sent";
+                throw error;
+            }
+
+            const idea = await _ideaRepository.get(ideaId);
+            if (!idea){
+                const error = new Error();
+                error.status = 404;
+                error.message = "idea does not exist";
+                throw error;
+            }
+
+            idea.downvotes.push(true);
+            
+            return await _ideaRepository.update(ideaId, {upvotes: idea.downvotes});
+        }
+    }
+
+    module.exports = IdeaService;
+
+en comment.service.js:
+    const BaseService = require('./base.service');
+    let _commentRepository = null;
+    let _ideaRepository = null;
+
+    class CommentService extends BaseService{
+        constructor({CommentRepository, IdeaRepository}){
+            super(CommentRepository);
+            _commentRepository = CommentRepository;
+            _ideaRepository = IdeaRepository;
+        }
+
+        async getIdeaComment(ideaId){
+            if (ideaId){
+                const error = new Error();
+                error.status = 400;
+                error.message = "ideaId must be sent";
+                throw error;
+            }
+            const idea = await _ideaRepository.get(ideaId);
+            if (!idea){
+                const error = new Error();
+                error.status = 404;
+                error.message = "idea does not exist";
+                throw error;
+            }
+
+            const { comments } = idea;
+            return comments;
+        }
+
+        async createComment(commnent, ideaId){
+            if (ideaId){
+                const error = new Error();
+                error.status = 400;
+                error.message = "ideaId must be sent";
+                throw error;
+            }
+            const idea = await _ideaRepository.get(ideaId);
+            if (!idea){
+                const error = new Error();
+                error.status = 404;
+                error.message = "idea does not exist";
+                throw error;
+            }
+
+            const createdComment = await _commentRepository.create(commnent);
+            idea.comments.push(createdComment); 
+
+            return await _ideaRepository.update(ideaId, {comments: idea.comments});
+        }
+    }
+
+    module.exports = CommentService;
+
+en service/index.js:
+    module.exports = {
+        HomeService: require("./home.service"),
+        UserService: require('./user.service'),
+        IdeaService: require('./idea.service'),
+        CommentService: require('./comment.service')
+    }
+
+en el contenedor:
+importamos donde ya teniamos el sevicio de home:
+    UserService, IdeaService, CommentService
+
+    Agregamos los registros de los servicios donde ya teniamos el sevicio de homeService:
+    UserService: asClass(UserService).singleton(), 
+    IdeaService: asClass(IdeaService).singleton(), 
+    CommentService: asClass(CommentService).singleton() 
+-----------------------------------------------------------------------------------------------------
