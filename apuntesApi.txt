@@ -24,7 +24,7 @@ Se hizo commit con un gad ADD:"" y pull.
 -----------------------------------------------------------------------------
 Crear archivo .env:
     touch .env
-en dicho archivo configuramos variables de entorno:
+en dicho archivo configuramos variables de entorno (Este archivo no deberia de estar en el git, se debe poner en el gitignore):
 PORT=5050
 MONGO_URI="mongodb+srv://dbJB:7vteUYhvernRe9y@cluster0-yovst.azure.mongodb.net/shareyouridea?retryWrites=true&w=majority"
 APPLICATION_NAME="Share Your Idea"
@@ -255,12 +255,12 @@ user.models.js:
     });
 
     UserSchema.methods.toJSON = function(){
-        let user = this.toObjetc();
+        let user = this.toObject();
         delete user.password;
         return user;
     };
 
-    UserSchema.methods.comparePassword = function (){
+    UserSchema.methods.comparePasswords = function (){
         return compareSync(password, this.password);
     };
 
@@ -869,3 +869,205 @@ y en agregamos las rutas abajo de la de home:
     apiRoutes.use("/user", UserRoutes);
     apiRoutes.use("/idea", IdeaRoutes);
     apiRoutes.use("/comment", CommentRoutes);
+
+---------------------------------------------------------------------------------------------------
+Autentificacion:
+
+en config/index.js:
+agregamos una variable de entorno
+, JWT_SECRET: process.env.JWT_SECRET
+
+en /.env:
+JWT_SECRET=kjs34%^&@jdkJB
+
+en helpers/jwt.helper.js:
+    const {sign} = require('jsonwebtoken');
+    const {JWT_SECRET} = require('../config');
+
+    module.exports.generateToken = function(user){
+        return sign ({user}, JWT_SECRET, {expiresIn:'1h'});
+    };
+
+en helper/index.js:
+    module.exports = {
+        JwtHelper: require('./jwt.helper')
+    };
+
+en services/auth.service.js:
+const {generateToken} = require('../helpers/jwt.helper');
+let _userService = null;
+
+class AuthService{
+    constructor({UserService}) {
+        _userService = UserService;
+    }
+
+    async signUp(user){
+        const {username} = user;
+        const userExist = await _userService.getUserByUserName(username); //esto metodo viene del servicio user.service.js
+        if (userExist){
+            const error = new Error();
+            error.status= 401;
+            error.message = "User already exists";
+            throw error;
+        }
+        return await _userService.create(user);
+    }
+
+    async signIn(user){
+        const {username, password} = user;
+        const userExist = await _userService.getUserByUserName(username); //esto metodo viene del servicio user.service.js
+        if (!userExist){
+            const error = new Error();
+            error.status= 404;
+            error.message = "User does not exists";
+            throw error;
+        }
+
+        const validPassword = userExist.comparePasswords(password);
+        if (!validPassword){
+            const error = new Error();
+            error.status= 400;
+            error.message = "Invalid password";
+            throw error;
+        }
+
+        const userToEncode = {
+            username: userExist.username,
+            id: userExist._id
+        };
+
+        const token = generateToken(userToEncode);
+
+        return {token, user: userExist};
+    }
+}
+
+module.exports = AuthService;
+
+exportamos en el index.
+
+en controllers/auth.controller.js:
+    let _autService = null;
+
+    class AuthController{
+        constructor({AuthService}){
+            _autService= AuthService;
+        }
+
+        async signUp(req, res){
+            const {body} = req;
+            const createdUser = await _autService.signUp(body);
+            return res.status(201).send(createdUser);
+        }
+
+        async signIn(req, res){
+            const {body} = req;
+            const creds = await _autService.signIn(body);
+            return res.send(creds);
+        }
+    }
+
+    module.exports= AuthController;
+
+Importamos en el index.
+
+en routes/auth.routes.js
+    const { Router } = require('express');
+
+    module.exports = function({ AuthController }){
+        const router = Router();
+
+        router.post("/signup", AuthController.signUp);
+        router.post("/signin", AuthController.signIn);
+        
+        return router;
+    }
+
+en routes/index.routes.js:
+    AuthRoutes: require('./auth.routes')
+
+importamos el servicio, el controlador y la ruta en el container:
+
+en routes/index.js:
+exportar en la clase AuthRoutes en el module.exports.
+
+y creamos la ruta:
+    apiRoutes.use("/auth", AuthRoutes);
+
+para hacer un comprobacion de nuestra api:
+Usando postman ponemos en la url: http://localhost:5050/v1/api/auth/signup [POST]
+y en la pestanie de Body y la opcion de raw y en JSON:
+{
+	"name":"jheral2",
+	"username":"JB2",
+	"password":"asd.456",
+	"age": 25
+}
+
+y lo podemos ver en mongo atlas o con la url: http://localhost:5050/v1/api/user [GET]
+Nos deberias de mostrar el user creado.
+
+y para obtener el token: http://localhost:5050/v1/api/auth/signin [POST]
+{
+	"username":"JB2",
+	"password":"asd.456"
+}
+
+en middlewares/auth.middleware:
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../config');
+
+    module.exports = function( req, res, next ){
+        const token = req.headers["authorization"];
+        if(!token){
+            const error = new Error();
+            error.status= 400;
+            error.message= "Token must be sent";
+            throw error;
+        }
+
+        jwt.verify(token, JWT_SECRET,function(err, decodedToken){
+            if (err) {
+                const error = new Error();
+                error.status= 401;
+                error.message= "Invalid token";
+                throw error;
+            }
+
+            req.user = decodedToken.user;
+            next();
+        });
+    }
+
+lo importamos en el middlewares/index.js:
+    ,AuthMiddleware: require('./auth.middleware')
+
+Y en routes/user.routes.js:
+lo importamos:const { AuthMiddleware } =require('../middlewares');
+
+y lo agregamos como un arreglo o no en la ruta de obtener todos los usuarios
+    router.get("", [AuthMiddleware], UserController.getAll);
+
+volvemos a probar en con: http://localhost:5050/v1/api/user [GET]
+Nos va a salir un:
+{
+    "status": 400,
+    "message": "Token must be sent"
+}
+
+Por lo cual nuestro middleware esta funcionando. Esta protegido por un token.
+
+Para ver todos los usuarios bien, debemos hacer un signIn con http://localhost:5050/v1/api/auth/signin [POST]
+{
+	"username":"JB2",
+	"password":"asd.456"
+}
+
+Y luego copiar el token. En postman entramos en la pestania de headers que esta a la par de body:
+en key: Authorization 
+en Value: pegamos el token.
+
+y nos muestra los usuarios.
+
+----------------------------------------------------------------------------------------------------
