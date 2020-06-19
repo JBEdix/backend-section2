@@ -5,7 +5,7 @@ class BaseService{
     async get(id){
         if(!id){
             const error = new Error();
-            error.status = 404;
+            error.status = 400;
             error.message = "id must be sent";
             throw error;
         }
@@ -19,8 +19,8 @@ class BaseService{
         }
     }
     
-    async getAll(){
-        return await this.repository.getAll();
+    async getAll(pageSize, pageNum){
+        return await this.repository.getAll(pageSize, pageNum);
     }
 
     async create(entity){
