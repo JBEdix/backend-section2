@@ -10,12 +10,12 @@ const UserSchema = new Schema({
 });
 
 UserSchema.methods.toJSON = function(){
-    let user = this.toObjetc();
+    let user = this.toObject();
     delete user.password;
     return user;
 };
 
-UserSchema.methods.comparePassword = function (){
+UserSchema.methods.comparePasswords = function (password){
     return compareSync(password, this.password);
 };
 
