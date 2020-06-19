@@ -1397,3 +1397,26 @@ en test/unit/services:
 
 para hacer el testeo debemos usar la terminal: npm test
 ------------------------------------------------------------------------------------------
+
+Swagger: para la documentacion
+
+Hay que usar un programa para crear un json de todo nuestro proyecto. que genere todo esto de forma automatica
+
+tenemos dos json en /src/config/swagger/:
+swaggerDEV.json y swaggerPROD
+
+en .env creamos una nueva variable de entorno:
+    SAGGER_DOC=swaggerDEV
+
+la exportamos en el index.js de config:
+    SAGGER_PATH: `../config/swagger/${process.env.SAGGER_DOC}.json`
+
+Agregamos la ruta en routes/index.js:
+    importamos el swagger:
+    const swaggerUI = require('swagger-ui-express');
+    const { SAGGER_PATH } = require('../config');
+    const swaggerDocument = require(SAGGER_PATH);
+
+    creamos la ruta:
+    router.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+    
