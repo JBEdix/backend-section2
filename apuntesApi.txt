@@ -1159,3 +1159,55 @@ http://localhost:5050/v1/api/idea [GET]
 http://localhost:5050/v1/api/idea?pageSize=4&numPage=1 [GET]
 
 -------------------------------------------------------------------------------------------------
+
+Caching: Implementar la cache de la api:
+
+en .env:
+agregamos una variable de entorno
+    CACHE_KEY=myCachePassword%asd.456
+
+Lo adicionamos en el config/index.js:
+    ,CACHE_KEY: process.env.CACHE_KEY
+
+en middlewares/cache.middleware.js:
+    const mcache = require('memory-cache');
+    const { CACHE_KEY } = require('../config');
+
+    module.exports=function(duration){
+        return(req, res, next) =>{
+            const key = CACHE_KEY + req.originUrl || req.url;
+            const cachedBody = mcache.get(key);
+
+            if (cachedBody) {
+                return res.send(JSON.parse(cachedBody));
+            } else{
+                res.sendResponse = res.send;
+                res.send = body => {
+                    mcache.put(key, body, duration * 1000);
+                    res.sendResponse(body);
+                };
+                next();
+            }
+        }
+    }
+
+en middlewares/index.js
+    ,CacheMiddleware: require('./cache.middleware')
+
+en helpers/cache-time.helper.js:
+    module.exports={
+        ONE_HOUR: 360
+    }
+
+en helpers/index.js:
+    ,CACHE_TIME: require('./cache-time.helper')
+
+en routes/user.routes.js:
+importamos: 
+    const { CACHE_TIME } = require('../helpers');
+
+agregamos en donde tenemos los middlewares [AuthMiddleware, ParseIntMiddleware, CacheMiddleware(CACHE_TIME.ONE_HOUR)]
+
+para probar haremos una peticion http://localhost:5050/v1/api/user [GET] teniendo en cuenta el token.
+
+si vemos en la parte de time podemos ver el tiempo de ejecucion. si volvemos a hacer la peticion el tiempo disminuye significativa.
