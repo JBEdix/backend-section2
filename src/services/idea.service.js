@@ -7,14 +7,14 @@ class IdeaService extends BaseService{
         _ideaRepository = IdeaRepository;
     }
 
-    async getUserIdea(author){
+    async getUserIdeas(author){
         if(!author){
             const error = new Error();
             error.status = 400;
             error.message = "UserId must be sent";
             throw error;
         }
-        return await _ideaRepository.getUserIdea(author);
+        return await _ideaRepository.getUserIdeas(author);
     }
 
     async upvoteIdea(ideaId){
@@ -56,7 +56,7 @@ class IdeaService extends BaseService{
 
         idea.downvotes.push(true);
         
-        return await _ideaRepository.update(ideaId, {upvotes: idea.downvotes});
+        return await _ideaRepository.update(ideaId, {downvotes: idea.downvotes});
     }
 }
 

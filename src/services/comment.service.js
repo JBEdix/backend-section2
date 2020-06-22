@@ -10,7 +10,7 @@ class CommentService extends BaseService{
     }
 
     async getIdeaComment(ideaId){
-        if (ideaId){
+        if (!ideaId){
             const error = new Error();
             error.status = 400;
             error.message = "ideaId must be sent";
@@ -28,8 +28,8 @@ class CommentService extends BaseService{
         return comments;
     }
 
-    async createComment(commnent, ideaId){
-        if (ideaId){
+    async createComment(commnent, ideaId, userId){
+        if (!ideaId){
             const error = new Error();
             error.status = 400;
             error.message = "ideaId must be sent";
@@ -43,7 +43,7 @@ class CommentService extends BaseService{
             throw error;
         }
 
-        const createdComment = await _commentRepository.create(commnent);
+        const createdComment = await _commentRepository.create({...commnent, author: userId});
         idea.comments.push(createdComment); 
 
         return await _ideaRepository.update(ideaId, {comments: idea.comments});

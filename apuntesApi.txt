@@ -386,8 +386,8 @@ class IdeaRepository extends BaseRepository {
         _idea = idea;
     }
 
-    async getUserIdea(author){
-        return await _idea.find([author]);
+    async getUserIdeas(author){
+        return await _idea.find({author});
     }
 }
 
@@ -448,6 +448,7 @@ en service/base.service.js:
                 error.message = "entity does not found";
                 throw error;
             }
+            return currentEntity;
         }
         
         async getAll(){
@@ -475,7 +476,7 @@ en service/base.service.js:
                 error.message = "id must be sent";
                 throw error;
             }
-            return await this.repository.delete(id, entity);
+            return await this.repository.delete(id);
         }
     }
 
@@ -508,14 +509,14 @@ en idea.service.js:
             _ideaRepository = IdeaRepository;
         }
 
-        async getUserIdea(author){
+        async getUserIdeas(author){
             if(!author){
                 const error = new Error();
                 error.status = 400;
                 error.message = "UserId must be sent";
                 throw error;
             }
-            return await _ideaRepository.getUserIdea(author);
+            return await _ideaRepository.getUserIdeas(author);
         }
 
         async upvoteIdea(ideaId){
@@ -557,7 +558,7 @@ en idea.service.js:
 
             idea.downvotes.push(true);
             
-            return await _ideaRepository.update(ideaId, {upvotes: idea.downvotes});
+            return await _ideaRepository.update(ideaId, {downvotes: idea.downvotes});
         }
     }
 
@@ -576,7 +577,7 @@ en comment.service.js:
         }
 
         async getIdeaComment(ideaId){
-            if (ideaId){
+            if (!ideaId){
                 const error = new Error();
                 error.status = 400;
                 error.message = "ideaId must be sent";
@@ -594,8 +595,8 @@ en comment.service.js:
             return comments;
         }
 
-        async createComment(commnent, ideaId){
-            if (ideaId){
+        async createComment(commnent, ideaId, , userId){
+            if (!ideaId){
                 const error = new Error();
                 error.status = 400;
                 error.message = "ideaId must be sent";
@@ -609,7 +610,7 @@ en comment.service.js:
                 throw error;
             }
 
-            const createdComment = await _commentRepository.create(commnent);
+            const createdComment = await _commentRepository.create({...commnent, author: userId});
             idea.comments.push(createdComment); 
 
             return await _ideaRepository.update(ideaId, {comments: idea.comments});
@@ -767,7 +768,8 @@ en comment.controller.js
         async createComment(req, res){
             const { body } = req;
             const { ideaId } = req.params;
-            const createComment = await _commentService.createComment(body, ideaId);
+            const { id: userId } = req.user;
+            const createComment = await _commentService.createComment(body, ideaId, userId);
             return res.send(createComment);
         }
     }
@@ -1420,3 +1422,84 @@ Agregamos la ruta en routes/index.js:
     creamos la ruta:
     router.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
     
+--------------------------------------------------------------------------------------
+
+Haciendo uso de nuestra api:
+USER:
+-------
+Traer todos los usuarios:
+http://localhost:5050/v1/api/user/ [GET]
+
+Traer un user en especifico:
+http://localhost:5050/v1/api/user/5eec16ecd011fa05d83658c4 [GET]
+
+Actualizar usuario: tener token de auth:
+http://localhost:5050/v1/api/user/5eec16ecd011fa05d83658c4 [PATH]
+{
+    "name": "Jheral Blanco"	
+}
+
+eliminar usuario: tener token de auth
+http://localhost:5050/v1/api/user/5eec16ecd011fa05d83658c4 [DELETE]
+
+
+IDEA:
+-------
+Obtener todas las ideas:
+http://localhost:5050/v1/api/idea/ [GET]
+
+traer una idea en especifico:
+http://localhost:5050/v1/api/idea/5eec1b3ad011fa05d83658ca [GET]
+
+Votar por una idea: tener token de auth
+http://localhost:5050/v1/api/idea/5eec1b3ad011fa05d83658ca/upvote [POST]
+
+DownVote por una idea: tener token de auth
+http://localhost:5050/v1/api/idea/5eec1b3ad011fa05d83658ca/downvote [POST]
+
+Actualizar la ideas: tener token de auth
+http://localhost:5050/v1/api/idea/5eec1b3ad011fa05d83658ca [PACT]
+{
+	"description": "App para llevar el control de las compras de la casa para la despensa. x2"
+}
+
+crear idea: token
+http://localhost:5050/v1/api/idea/ [POST]
+{
+    "idea": "Idea numero 2",
+    "description": "descripcion de la idea 2",
+    "author": "5eebefd582af010f6c784be5"
+}
+
+Eliminar idea: Token
+http://localhost:5050/v1/api/idea/5eefeeb1243b8a13c4b6acb4 [DELETE]
+
+Ver las ideas de un user en especifico: token
+http://localhost:5050/v1/api/idea/5eebefd582af010f6c784be5/all
+
+Comment:
+-------
+
+Crear comentarion:
+http://localhost:5050/v1/api/comment/5eec1b3ad011fa05d83658ca [POST]
+{
+    "comment":"Good idea",
+    "description":"asd.456"
+}
+
+para obtenet por un comentario en especifico:
+http://localhost:5050/v1/api/comment/5eeffae4a8ac141be80c9804/unique [GET]
+
+Obtener los comentarios de una idea en especifico: 
+http://localhost:5050/v1/api/comment/5eec1b3ad011fa05d83658ca [GET]
+
+actualizar un comentario: token
+http://localhost:5050/v1/api/comment/5ef01198a8ac141be80c9806 [PATH]
+{
+    "comment":"Good idea x2",
+    "description":"descripcion del comentarios. asd.456"
+}
+
+borrar un comentario: token
+http://localhost:5050/v1/api/comment/5ef01198a8ac141be80c9806 [DELTE]
+
