@@ -17,6 +17,7 @@ class BaseService{
             error.message = "entity does not found";
             throw error;
         }
+        return currentEntity;
     }
     
     async getAll(pageSize, pageNum){
@@ -44,7 +45,7 @@ class BaseService{
             error.message = "id must be sent";
             throw error;
         }
-        return await this.repository.delete(id, entity);
+        return await this.repository.delete(id);
     }
 }
 

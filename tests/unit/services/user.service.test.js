@@ -9,14 +9,14 @@ describe("User Service", () => {
     jest.clearAllMocks();
   });
 
-  /*it("Should find a usere by id", async () => {
+  it("Should find a usere by id", async () => {
     const UserRepository = UserRepositoryMock;
     UserRepository.get.mockReturnValue(usere);
 
     const _userService = new UserService({ UserRepository });
     const expected = await _userService.get(usere._id);
     expect(expected).toMatchObject(usere);
-  });*/
+  });
 
   it("Should find a usere by username", async () => {
     const UserRepository = UserRepositoryMock;
